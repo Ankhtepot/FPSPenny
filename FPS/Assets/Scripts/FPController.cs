@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class FPController : MonoBehaviour
 {
@@ -8,7 +10,10 @@ public class FPController : MonoBehaviour
     public AudioSource jump;
     public AudioSource land;
     public AudioSource ammoPickupSound;
+    public AudioSource triggerSound;
+    public AudioSource reloadSound;
     public AudioSource healthPickupSound;
+    public AudioSource deathSound;
     private float speed = 0.1f;
     private float Xsensitivity = 2;
     private float Ysensitivity = 2;
@@ -21,9 +26,21 @@ public class FPController : MonoBehaviour
 
     private bool cursorIsLocked = true;
     private bool lockCursor = true;
+    private bool playingWalking;
+    private bool previouslyGrounded = true;
 
     private float x;
     private float z;
+
+    private int ammo;
+    private int maxAmmo = 50;
+    private int ammoClip;
+    private int ammoClipMax = 10;
+
+    private float health;
+    private float maxHealth = 100f;
+    private bool isAlive = true;
+
     private static readonly int ARM = Animator.StringToHash("arm");
     private static readonly int FIRE = Animator.StringToHash("fire");
     private static readonly int RELOAD = Animator.StringToHash("reload");
@@ -36,6 +53,8 @@ public class FPController : MonoBehaviour
         capsule = GetComponent<CapsuleCollider>();
         cameraRot = cam.transform.localRotation;
         characterRot = transform.localRotation;
+
+        health = maxHealth;
     }
 
     // Update is called once per frame
@@ -44,14 +63,37 @@ public class FPController : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.F))
             anim.SetBool(ARM, !anim.GetBool(ARM));
 
-        if (Input.GetMouseButtonDown(0) && !anim.GetBool(FIRE))
+        if (Input.GetMouseButtonDown(0) 
+            && anim.GetBool(ARM)
+            && !anim.GetBool(FIRE))
         {
-            anim.SetTrigger(FIRE);
+            if (ammoClip > 0)
+            {
+                anim.SetTrigger(FIRE);
+                ammoClip -= 1;
+                Debug.Log($"Remaining ammo in a clip: {ammoClip}, spare ammo: {ammo}");
+            }
+            else
+            {
+                if (ammo == 0)
+                {
+                    triggerSound.Play();
+                }
+                else
+                {
+                    ReloadHandler();
+                }
+            }
             //shot.Play();
         }
 
-        if (Input.GetKeyDown(KeyCode.R))
-            anim.SetTrigger(RELOAD);
+        if (Input.GetKeyDown(KeyCode.R) 
+            && anim.GetBool(ARM) 
+            && ammo > 0 
+            && ammoClip < ammoClipMax)
+        {
+            ReloadHandler();
+        }
 
         if (Mathf.Abs(x) > 0 || Mathf.Abs(z) > 0)
         {
@@ -65,18 +107,26 @@ public class FPController : MonoBehaviour
         {
             anim.SetBool(WALKING, false);
             CancelInvoke(nameof(PlayFootStepAudio));
+            playingWalking = false;
         }
 
-        if (Input.GetKeyDown(KeyCode.Space) && IsGrounded())
+        bool grounded = IsGrounded();
+        if (Input.GetKeyDown(KeyCode.Space) && grounded)
         {
             rb.AddForce(0, 300, 0);
             jump.Play();
             if (anim.GetBool(WALKING))
             {
                 CancelInvoke(nameof(PlayFootStepAudio));
+                playingWalking = false;
             }
         }
+        else if (!previouslyGrounded && grounded)
+        {
+            land.Play();
+        }
 
+        previouslyGrounded = grounded;
     }
 
     private void PlayFootStepAudio()
@@ -87,26 +137,38 @@ public class FPController : MonoBehaviour
         audioSource.Play();
         footsteps[n] = footsteps[0];
         footsteps[0] = audioSource;
+        playingWalking = true;
     }
 
+    private void ReloadHandler()
+    {
+        var reloadedAmount = Mathf.Min(ammo, ammoClipMax - ammoClip);
+        ammo -= reloadedAmount;
+        ammoClip += reloadedAmount;
+        anim.SetTrigger(RELOAD);
+        reloadSound.Play();
+    }
 
     private void FixedUpdate()
     {
-        float yRot = Input.GetAxis("Mouse X") * Ysensitivity;
-        float xRot = Input.GetAxis("Mouse Y") * Xsensitivity;
+        if (isAlive)
+        {
+            float yRot = Input.GetAxis("Mouse X") * Ysensitivity;
+            float xRot = Input.GetAxis("Mouse Y") * Xsensitivity;
 
-        cameraRot *= Quaternion.Euler(-xRot, 0, 0);
-        characterRot *= Quaternion.Euler(0, yRot, 0);
+            cameraRot *= Quaternion.Euler(-xRot, 0, 0);
+            characterRot *= Quaternion.Euler(0, yRot, 0);
 
-        cameraRot = ClampRotationAroundXAxis(cameraRot);
+            cameraRot = ClampRotationAroundXAxis(cameraRot);
 
-        transform.localRotation = characterRot;
-        cam.transform.localRotation = cameraRot;
-        
-        x = Input.GetAxis("Horizontal") * speed;
-        z = Input.GetAxis("Vertical") * speed;
+            transform.localRotation = characterRot;
+            cam.transform.localRotation = cameraRot;
 
-        transform.position += cam.transform.forward * z + cam.transform.right * x; //new Vector3(x * speed, 0, z * speed);
+            x = Input.GetAxis("Horizontal") * speed;
+            z = Input.GetAxis("Vertical") * speed;
+
+            transform.position += cam.transform.forward * z + cam.transform.right * x; //new Vector3(x * speed, 0, z * speed);
+        }
 
         UpdateCursorLock();
     }
@@ -127,69 +189,100 @@ public class FPController : MonoBehaviour
 
     private bool IsGrounded()
     {
-        if (Physics.SphereCast(transform.position, capsule.radius, Vector3.down, out var hitInfo,
-                (capsule.height / 2f) - capsule.radius + 0.1f))
-        {
-            return true;
-        }
-        return false;
+        return Physics.SphereCast(transform.position, capsule.radius, Vector3.down, out var hitInfo,
+            (capsule.height / 2f) - capsule.radius + 0.1f);
     }
 
     private void OnCollisionEnter(Collision col)
     {
-        if (col.gameObject.CompareTag("Ammo"))
+        if (IsGrounded())
         {
-            Debug.Log("Ammo picked up");  
-            ammoPickupSound.Play();
-            Destroy(col.gameObject);
-        }
-        else if (col.gameObject.CompareTag("Medikit"))
-        {
-            Debug.Log("Medikit picked up");
-            healthPickupSound.Play();
-            Destroy(col.gameObject);
-        }
-        else if (IsGrounded())
-        {
-            land.Play();
-            if(anim.GetBool(WALKING))
+            if (anim.GetBool(WALKING) && !playingWalking)
+            {
                 InvokeRepeating(nameof(PlayFootStepAudio), 0, 0.4f);
+                playingWalking = true;
+            }
+        }
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        var second = other.gameObject;
+        if (second.CompareTag("Ammo") && ammo < maxAmmo)
+        {
+            ammo = Mathf.Clamp(ammo + 10, 0, maxAmmo);
+            Debug.Log($"Ammo picked up: {ammo}");
+            ammoPickupSound.Play();
+            Destroy(second);
+        }
+        else if (second.CompareTag("Medikit") && health < maxHealth)
+        {
+            health = Mathf.Clamp(health + 10, 0, maxHealth);
+            Debug.Log($"Medikit picked up: {health:n2}");
+            healthPickupSound.Play();
+            Destroy(second);
+        }
+        
+    }
+
+    private void OnTriggerStay(Collider other)
+    {
+        var second = other.gameObject;
+        
+        if (isAlive && second.CompareTag("Lava"))
+        {
+            health = Mathf.Clamp(health - (10 * Time.deltaTime), 0, 100);
+            Debug.Log($"Health: {health:n2}");
+            if (health <= 0)
+            {
+                DeathHandler();
+            }
         }
     }
 
     public void SetCursorLock(bool value)
     {
         lockCursor = value;
-        if (!lockCursor)
+        
+        if (lockCursor) return;
+        
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+    }
+
+    private void DeathHandler()
+    {
+        if (isAlive)
         {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
+            isAlive = false;
+            deathSound.Play();
+            Debug.Log("You died");
         }
     }
 
-    public void UpdateCursorLock()
+    private void UpdateCursorLock()
     {
         if (lockCursor)
             InternalLockUpdate();
     }
 
-    public void InternalLockUpdate()
+    private void InternalLockUpdate()
     {
         if (Input.GetKeyUp(KeyCode.Escape))
             cursorIsLocked = false;
-        else if ( Input.GetMouseButtonUp(0) )
+        else if (Input.GetMouseButtonUp(0))
             cursorIsLocked = true;
 
-        if (cursorIsLocked)
+        switch (cursorIsLocked)
         {
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
-        }
-        else if (!cursorIsLocked)
-        {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
+            case true:
+                Cursor.lockState = CursorLockMode.Locked;
+                Cursor.visible = false;
+                break;
+            case false:
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+                break;
         }
     }
-
 }
