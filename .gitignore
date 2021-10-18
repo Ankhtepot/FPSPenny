@@ -6,6 +6,7 @@ FPS/Build/*
 FPS/Obj/*
 FPS/WebBuild/*
 FPS/WindowsBuild/*
+FPS/Assets/Resources/*
 
 # ===================================== #
 # Visual Studio / MonoDevelop generated #

@@ -1,5 +1,4 @@
-﻿using System;
-using UnityEngine;
+﻿using UnityEngine;
 using Random = UnityEngine.Random;
 
 public class FPController : MonoBehaviour
@@ -197,11 +196,10 @@ public class FPController : MonoBehaviour
     {
         if (IsGrounded())
         {
-            if (anim.GetBool(WALKING) && !playingWalking)
-            {
-                InvokeRepeating(nameof(PlayFootStepAudio), 0, 0.4f);
-                playingWalking = true;
-            }
+            if (!anim.GetBool(WALKING) || playingWalking) return;
+            
+            InvokeRepeating(nameof(PlayFootStepAudio), 0, 0.4f);
+            playingWalking = true;
         }
     }
 
