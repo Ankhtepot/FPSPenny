@@ -3,6 +3,8 @@ using Random = UnityEngine.Random;
 
 public class FPController : MonoBehaviour
 {
+    [SerializeField] private float walkSpeed = 0.1f;
+    [SerializeField] private float runSpeed = 30f;
     public GameObject cam;
     public Animator anim;
     public AudioSource[] footsteps;
@@ -13,7 +15,6 @@ public class FPController : MonoBehaviour
     public AudioSource reloadSound;
     public AudioSource healthPickupSound;
     public AudioSource deathSound;
-    private float speed = 0.1f;
     private float Xsensitivity = 2;
     private float Ysensitivity = 2;
     private float MinimumX = -90;
@@ -39,6 +40,7 @@ public class FPController : MonoBehaviour
     private float health;
     private float maxHealth = 100f;
     private bool isAlive = true;
+    private bool runPressed;
 
     private static readonly int ARM = Animator.StringToHash("arm");
     private static readonly int FIRE = Animator.StringToHash("fire");
@@ -163,6 +165,7 @@ public class FPController : MonoBehaviour
             transform.localRotation = characterRot;
             cam.transform.localRotation = cameraRot;
 
+            var speed = (Input.GetKey(KeyCode.LeftShift) ? runSpeed : walkSpeed) * Time.deltaTime;
             x = Input.GetAxis("Horizontal") * speed;
             z = Input.GetAxis("Vertical") * speed;
 
