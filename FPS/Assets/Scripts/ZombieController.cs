@@ -1,51 +1,200 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
+using Random = UnityEngine.Random;
 
 public class ZombieController : MonoBehaviour
 {
+    [SerializeField] private GameObject ragDoll;
     [SerializeField] private Animator animator;
+    [SerializeField] private NavMeshAgent agent;
+    [SerializeField] private STATE state = STATE.Idle;
+    public float walkingSpeed = 10;
+    public float runningSpeed = 20;
+    public GameObject target;
+
     private static readonly int Walk = Animator.StringToHash("Walk");
     private static readonly int Death = Animator.StringToHash("Death");
     private static readonly int Run = Animator.StringToHash("Run");
     private static readonly int Attack = Animator.StringToHash("Attack");
 
+    private enum STATE
+    {
+        NONE = 0,
+        Idle,
+        Wander,
+        Attack,
+        Chase,
+        Dead
+    }
+
+    private void Start()
+    {
+        TurnOffAnimBools();
+    }
+
     void Update()
     {
-        if (Input.GetKey(KeyCode.Alpha1))
+        // animator.SetBool(Walk, Input.GetKey(KeyCode.Alpha1));
+        //
+        // animator.SetBool(Attack, Input.GetKey(KeyCode.Alpha2));
+        //
+        // animator.SetBool(Run, Input.GetKey(KeyCode.Alpha3));
+        //
+        // animator.SetBool(Death, Input.GetKey(KeyCode.Alpha4));
+
+        if (Input.GetKeyDown(KeyCode.P))
         {
+            if (Random.Range(0, 4) > 1)
+            {
+                state = STATE.Dead;
+            } 
+            else
+            {
+                RagDollDeath();
+            }
+            return;
+        }
+        
+        if (!target)
+        {
+            target = GameObject.FindGameObjectWithTag("Player");
+            return;
+        }
+
+        switch (state)
+        {
+            case STATE.NONE:
+                break;
+            case STATE.Idle:
+                IdleState();
+                break;
+            case STATE.Wander:
+                WanderState();
+                break;
+            case STATE.Attack:
+                AttackState();
+                break;
+            case STATE.Chase:
+                ChaseState();
+                break;
+            case STATE.Dead:
+                DeathState();
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    }
+
+    private void IdleState()
+    {
+        if (CanSeePlayer())
+        {
+            state = STATE.Chase;
+        }
+        else if (Random.Range(0, 5000) < 5)
+        {
+            state = STATE.Wander;
+        }
+    }
+
+    private void WanderState()
+    {
+        if (!agent.hasPath)
+        {
+            float newX = transform.position.x + Random.Range(-5, 5);
+            float newZ = transform.position.z + Random.Range(-5, 5);
+            float newY = Terrain.activeTerrain.SampleHeight(new Vector3(newX, 0, newZ));
+            var destination = new Vector3(newX, newY, newZ);
+
+            agent.SetDestination(destination);
+            agent.stoppingDistance = 0.2f;
+            agent.speed = walkingSpeed;
+
+            TurnOffAnimBools();
             animator.SetBool(Walk, true);
         }
-        else
+
+        if (CanSeePlayer()) state = STATE.Chase;
+        else if (Random.Range(0, 5000) < 5)
         {
-            animator.SetBool(Walk, false);
+            TurnOffAnimBools();
+            agent.ResetPath();
+            state = STATE.Idle;
         }
-        
-        if (Input.GetKey(KeyCode.Alpha2))
+    }
+
+    private void AttackState()
+    {
+        TurnOffAnimBools();
+        animator.SetBool(Attack, true);
+
+        transform.LookAt(target.transform.position);
+
+        if (DistanceToPlayer() > agent.stoppingDistance + 2)
         {
-            animator.SetBool(Attack, true);
+            state = STATE.Chase;
         }
-        else
+    }
+
+    private void ChaseState()
+    {
+        agent.SetDestination(target.transform.position);
+        agent.stoppingDistance = 3;
+        agent.speed = runningSpeed;
+        TurnOffAnimBools();
+        animator.SetBool(Run, true);
+
+        if (agent.remainingDistance <= agent.stoppingDistance && !agent.pathPending)
         {
-            animator.SetBool(Attack, false);
+            state = STATE.Attack;
         }
-        
-        if (Input.GetKey(KeyCode.Alpha3))
+
+        if (ForgetPlayer())
         {
-            animator.SetBool(Run, true);
+            state = STATE.Wander;
+            agent.ResetPath();
         }
-        else
-        {
-            animator.SetBool(Run, false);
-        }
-        
-        if (Input.GetKey(KeyCode.Alpha4))
-        {
-            animator.SetBool(Death, true);
-        }
-        else
-        {
-            animator.SetBool(Death, false);
-        }
+    }
+
+    private void DeathState()
+    {
+        agent.ResetPath();
+        TurnOffAnimBools();
+        animator.SetBool(Death, true);
+    }
+
+    private void RagDollDeath()
+    {
+        var rd = Instantiate(ragDoll, transform.position, transform.rotation);
+        rd.transform.Find("Hips").GetComponent<Rigidbody>().AddForce(Camera.main.transform.forward * 10000);
+        Destroy(gameObject);
+    }
+
+    private bool CanSeePlayer()
+    {
+        if (DistanceToPlayer() > 10) return false;
+
+        return true;
+    }
+
+    bool ForgetPlayer()
+    {
+        return DistanceToPlayer() > 20;
+    }
+
+    private float DistanceToPlayer()
+    {
+        return Vector3.Distance(target.transform.position, transform.position);
+    }
+
+    void TurnOffAnimBools()
+    {
+        animator.SetBool(Walk, false);
+        animator.SetBool(Run, false);
+        animator.SetBool(Attack, false);
+        animator.SetBool(Death, false);
     }
 }

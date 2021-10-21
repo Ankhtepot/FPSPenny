@@ -824,10 +824,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 3039773560437143450, guid: 2284fb370519d4434ad0ce0946f96aa7, type: 3}
-      propertyPath: m_IsTrigger
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 5710403498752496786, guid: 2284fb370519d4434ad0ce0946f96aa7, type: 3}
       propertyPath: m_Name
       value: AmmoBox
@@ -945,10 +941,6 @@ PrefabInstance:
     - target: {fileID: 7741545902358665241, guid: 7eb2d2e5ed5664c3da253b1245ff8187, type: 3}
       propertyPath: m_Name
       value: MedBox
-      objectReference: {fileID: 0}
-    - target: {fileID: 8958353057235269060, guid: 7eb2d2e5ed5664c3da253b1245ff8187, type: 3}
-      propertyPath: m_IsTrigger
-      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 7eb2d2e5ed5664c3da253b1245ff8187, type: 3}
