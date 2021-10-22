@@ -905,9 +905,10 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1171056215368852661}
+  - component: {fileID: -3498363251011960510}
   m_Layer: 0
   m_Name: BossRagdoll
-  m_TagString: Untagged
+  m_TagString: RagDoll
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -928,6 +929,19 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &-3498363251011960510
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2745846347902228134}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 28b93b03d507046408395b10804d4d88, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  delay: 5
 --- !u!1 &2947142625312501670
 GameObject:
   m_ObjectHideFlags: 0

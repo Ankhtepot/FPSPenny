@@ -5,6 +5,8 @@ public class FPController : MonoBehaviour
 {
     [SerializeField] private float walkSpeed = 0.1f;
     [SerializeField] private float runSpeed = 30f;
+    [SerializeField] private Transform firePoint;
+    [SerializeField] private AudioClip[] takeDamageSounds;
     public GameObject cam;
     public Animator anim;
     public AudioSource[] footsteps;
@@ -14,6 +16,7 @@ public class FPController : MonoBehaviour
     public AudioSource triggerSound;
     public AudioSource reloadSound;
     public AudioSource healthPickupSound;
+    public AudioSource takeHitSound;
     public AudioSource deathSound;
     private float Xsensitivity = 2;
     private float Ysensitivity = 2;
@@ -32,12 +35,12 @@ public class FPController : MonoBehaviour
     private float x;
     private float z;
 
-    private int ammo;
+    private int ammo = 50;
     private int maxAmmo = 50;
-    private int ammoClip;
+    private int ammoClip = 10;
     private int ammoClipMax = 10;
 
-    private float health;
+    private float health = 100f;
     private float maxHealth = 100f;
     private bool isAlive = true;
     private bool runPressed;
@@ -70,9 +73,7 @@ public class FPController : MonoBehaviour
         {
             if (ammoClip > 0)
             {
-                anim.SetTrigger(FIRE);
-                ammoClip -= 1;
-                Debug.Log($"Remaining ammo in a clip: {ammoClip}, spare ammo: {ammo}");
+                ShootHandler();
             }
             else
             {
@@ -128,6 +129,35 @@ public class FPController : MonoBehaviour
         }
 
         previouslyGrounded = grounded;
+    }
+
+    public void TakeHit(float amount)
+    {
+        health = Mathf.Clamp(health - amount, 0, maxHealth);
+        Debug.Log($"Health after attack: {health}");
+        PlayTakeHitSound();
+    }
+
+    private void PlayTakeHitSound()
+    {
+        takeHitSound.clip = takeDamageSounds[Random.Range(0, takeDamageSounds.Length)];
+        takeHitSound.Play();
+    }
+
+    private void ShootHandler()
+    {
+        anim.SetTrigger(FIRE);
+        ammoClip -= 1;
+        Debug.Log($"Remaining ammo in a clip: {ammoClip}, spare ammo: {ammo}");
+
+        if (Physics.Raycast(firePoint.position, firePoint.forward, out var hitInfo, 200))
+        {
+            GameObject hitZombie = hitInfo.collider.gameObject;
+            if (hitZombie.CompareTag("Zombie"))
+            {
+                hitZombie.GetComponent<ZombieController>().DeathHandler();
+            }
+        }
     }
 
     private void PlayFootStepAudio()

@@ -13,6 +13,7 @@ public class ZombieController : MonoBehaviour
     [SerializeField] private STATE state = STATE.Idle;
     public float walkingSpeed = 10;
     public float runningSpeed = 20;
+    [SerializeField] private float damageAmount = 5;
     public GameObject target;
 
     private static readonly int Walk = Animator.StringToHash("Walk");
@@ -45,19 +46,6 @@ public class ZombieController : MonoBehaviour
         //
         // animator.SetBool(Death, Input.GetKey(KeyCode.Alpha4));
 
-        if (Input.GetKeyDown(KeyCode.P))
-        {
-            if (Random.Range(0, 4) > 1)
-            {
-                state = STATE.Dead;
-            } 
-            else
-            {
-                RagDollDeath();
-            }
-            return;
-        }
-        
         if (!target)
         {
             target = GameObject.FindGameObjectWithTag("Player");
@@ -85,6 +73,23 @@ public class ZombieController : MonoBehaviour
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
+        }
+    }
+
+    public void DamagePlayer()
+    {
+        target.GetComponent<FPController>().TakeHit(damageAmount);
+    }
+
+    public void DeathHandler()
+    {
+        if (Random.Range(0, 4) > 1)
+        {
+            state = STATE.Dead;
+        }
+        else
+        {
+            RagDollDeath();
         }
     }
 
@@ -161,9 +166,10 @@ public class ZombieController : MonoBehaviour
 
     private void DeathState()
     {
-        agent.ResetPath();
+        Destroy(agent);
         TurnOffAnimBools();
         animator.SetBool(Death, true);
+        GetComponent<SinkBody>().StartSink();
     }
 
     private void RagDollDeath()
