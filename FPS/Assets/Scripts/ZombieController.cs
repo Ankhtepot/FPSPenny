@@ -46,7 +46,7 @@ public class ZombieController : MonoBehaviour
         //
         // animator.SetBool(Death, Input.GetKey(KeyCode.Alpha4));
 
-        if (!target)
+        if (!target && !GameStats.gameOver)
         {
             target = GameObject.FindGameObjectWithTag("Player");
             return;
@@ -78,7 +78,14 @@ public class ZombieController : MonoBehaviour
 
     public void DamagePlayer()
     {
-        target.GetComponent<FPController>().TakeHit(damageAmount);
+        if (target)
+        {
+            target.GetComponent<FPController>().TakeHit(damageAmount);
+        }
+        else
+        {
+            state = STATE.Idle;
+        }
     }
 
     public void DeathHandler()
@@ -133,6 +140,13 @@ public class ZombieController : MonoBehaviour
 
     private void AttackState()
     {
+        if (GameStats.gameOver)
+        {
+            TurnOffAnimBools();
+            state = STATE.Wander;
+            return;
+        }
+        
         TurnOffAnimBools();
         animator.SetBool(Attack, true);
 
@@ -146,6 +160,13 @@ public class ZombieController : MonoBehaviour
 
     private void ChaseState()
     {
+        if (GameStats.gameOver)
+        {
+            TurnOffAnimBools();
+            state = STATE.Wander;
+            return;
+        }
+        
         agent.SetDestination(target.transform.position);
         agent.stoppingDistance = 3;
         agent.speed = runningSpeed;
@@ -193,7 +214,9 @@ public class ZombieController : MonoBehaviour
 
     private float DistanceToPlayer()
     {
-        return Vector3.Distance(target.transform.position, transform.position);
+        return GameStats.gameOver 
+            ? Mathf.Infinity 
+            : Vector3.Distance(target.transform.position, transform.position);
     }
 
     void TurnOffAnimBools()

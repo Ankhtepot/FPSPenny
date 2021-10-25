@@ -323,6 +323,7 @@ GameObject:
   - component: {fileID: 1399351112}
   - component: {fileID: 6890160993119346266}
   - component: {fileID: 2055650004}
+  - component: {fileID: 3316120225896704003}
   m_Layer: 6
   m_Name: boss
   m_TagString: Zombie
@@ -381,8 +382,8 @@ MonoBehaviour:
   animator: {fileID: 3277696249206785949}
   agent: {fileID: 1399351112}
   state: 1
-  walkingSpeed: 0.3
-  runningSpeed: 0.3
+  walkingSpeed: 0.6
+  runningSpeed: 0.6
   damageAmount: 20
   target: {fileID: 0}
 --- !u!195 &1399351112
@@ -434,6 +435,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   delay: 10
+--- !u!114 &3316120225896704003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1099347172983380646}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a6c15fc4cf339bd4eb2e694a5d9231c4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  image: {fileID: 7565265881522691863, guid: e93ae60439207464b9a733e6660ff60e, type: 3}
 --- !u!1 &1571866649296816644
 GameObject:
   m_ObjectHideFlags: 0

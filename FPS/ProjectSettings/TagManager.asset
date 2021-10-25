@@ -10,6 +10,7 @@ TagManager:
   - Zombie
   - Enemy
   - RagDoll
+  - Home
   layers:
   - Default
   - TransparentFX

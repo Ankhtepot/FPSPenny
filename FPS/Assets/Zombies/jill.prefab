@@ -4431,6 +4431,7 @@ GameObject:
   - component: {fileID: 1401732057}
   - component: {fileID: 694672670480364097}
   - component: {fileID: 129170974}
+  - component: {fileID: 690688565361679068}
   m_Layer: 6
   m_Name: jill
   m_TagString: Zombie
@@ -4542,3 +4543,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   delay: 10
+--- !u!114 &690688565361679068
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9153167617879130721}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a6c15fc4cf339bd4eb2e694a5d9231c4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  image: {fileID: 7565265881522691863, guid: e93ae60439207464b9a733e6660ff60e, type: 3}

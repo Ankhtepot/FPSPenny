@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
 using Random = UnityEngine.Random;
 
 public class FPController : MonoBehaviour
@@ -8,6 +10,10 @@ public class FPController : MonoBehaviour
     [SerializeField] private Transform firePoint;
     [SerializeField] private AudioClip[] takeDamageSounds;
     public GameObject cam;
+    public GameObject stevePrefab;
+    public Slider healthBar;
+    public TextMeshProUGUI ammoTMP;
+    public TextMeshProUGUI clipTMP;
     public Animator anim;
     public AudioSource[] footsteps;
     public AudioSource jump;
@@ -49,6 +55,8 @@ public class FPController : MonoBehaviour
     private static readonly int FIRE = Animator.StringToHash("fire");
     private static readonly int RELOAD = Animator.StringToHash("reload");
     private static readonly int WALKING = Animator.StringToHash("walking");
+    private static readonly int Death = Animator.StringToHash("Death");
+    private static readonly int Dance = Animator.StringToHash("Dance");
 
     // Start is called before the first frame update
     private void Start()
@@ -58,7 +66,9 @@ public class FPController : MonoBehaviour
         cameraRot = cam.transform.localRotation;
         characterRot = transform.localRotation;
 
-        health = maxHealth;
+        TakeDamage(-100f);
+        RemoveAmmoFromClip(0);
+        RemoveAmmo(0);
     }
 
     // Update is called once per frame
@@ -67,9 +77,11 @@ public class FPController : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.F))
             anim.SetBool(ARM, !anim.GetBool(ARM));
 
+        runPressed = Input.GetKey(KeyCode.LeftShift);
+
         if (Input.GetMouseButtonDown(0) 
-            && anim.GetBool(ARM)
-            && !anim.GetBool(FIRE))
+            && GameStats.canShoot 
+            && anim.GetBool(ARM))
         {
             if (ammoClip > 0)
             {
@@ -133,9 +145,39 @@ public class FPController : MonoBehaviour
 
     public void TakeHit(float amount)
     {
-        health = Mathf.Clamp(health - amount, 0, maxHealth);
-        Debug.Log($"Health after attack: {health}");
         PlayTakeHitSound();
+        TakeDamage(amount);
+    }
+
+    private void TakeDamage(float amount)
+    {
+        health = Mathf.Clamp(health - amount, 0, maxHealth);
+        healthBar.value = Mathf.RoundToInt(health);
+        
+        if (health <= 0)
+        {
+            Vector3 pos = new Vector3(transform.position.x,
+                Terrain.activeTerrain.SampleHeight(transform.position),
+                transform.position.z);
+
+            GameObject steve = Instantiate(stevePrefab, pos, transform.rotation);
+            steve.GetComponent<Animator>().SetTrigger(Death);
+            GameStats.gameOver = true;
+            Debug.Log($"Health after attack: {health:n2}");
+            Destroy(gameObject);
+        }
+    }
+
+    private void RemoveAmmoFromClip(int amount)
+    {
+        ammoClip = Mathf.Clamp(ammoClip - amount, 0, ammoClipMax);
+        clipTMP.text = ammoClip.ToString();
+    }
+
+    private void RemoveAmmo(int amount)
+    {
+        ammo = Mathf.Clamp(ammo - amount, 0, maxAmmo);
+        ammoTMP.text = ammo.ToString();
     }
 
     private void PlayTakeHitSound()
@@ -146,8 +188,9 @@ public class FPController : MonoBehaviour
 
     private void ShootHandler()
     {
+        GameStats.canShoot = false;
         anim.SetTrigger(FIRE);
-        ammoClip -= 1;
+        RemoveAmmoFromClip(1);
         Debug.Log($"Remaining ammo in a clip: {ammoClip}, spare ammo: {ammo}");
 
         if (Physics.Raycast(firePoint.position, firePoint.forward, out var hitInfo, 200))
@@ -174,8 +217,8 @@ public class FPController : MonoBehaviour
     private void ReloadHandler()
     {
         var reloadedAmount = Mathf.Min(ammo, ammoClipMax - ammoClip);
-        ammo -= reloadedAmount;
-        ammoClip += reloadedAmount;
+        RemoveAmmo(reloadedAmount);
+        RemoveAmmoFromClip(-reloadedAmount);
         anim.SetTrigger(RELOAD);
         reloadSound.Play();
     }
@@ -195,7 +238,7 @@ public class FPController : MonoBehaviour
             transform.localRotation = characterRot;
             cam.transform.localRotation = cameraRot;
 
-            var speed = (Input.GetKey(KeyCode.LeftShift) ? runSpeed : walkSpeed) * Time.deltaTime;
+            var speed = (runPressed ? runSpeed : walkSpeed) * Time.deltaTime;
             x = Input.GetAxis("Horizontal") * speed;
             z = Input.GetAxis("Vertical") * speed;
 
@@ -241,19 +284,29 @@ public class FPController : MonoBehaviour
         var second = other.gameObject;
         if (second.CompareTag("Ammo") && ammo < maxAmmo)
         {
-            ammo = Mathf.Clamp(ammo + 10, 0, maxAmmo);
+            RemoveAmmo(-10);
             Debug.Log($"Ammo picked up: {ammo}");
             ammoPickupSound.Play();
             Destroy(second);
         }
         else if (second.CompareTag("Medikit") && health < maxHealth)
         {
-            health = Mathf.Clamp(health + 10, 0, maxHealth);
+            TakeDamage(-10f);
             Debug.Log($"Medikit picked up: {health:n2}");
             healthPickupSound.Play();
             Destroy(second);
         }
-        
+        else if (second.CompareTag("Home"))
+        {
+            Vector3 pos = new Vector3(transform.position.x,
+                Terrain.activeTerrain.SampleHeight(transform.position),
+                transform.position.z);
+
+            GameObject steve = Instantiate(stevePrefab, pos, transform.rotation);
+            steve.GetComponent<Animator>().SetTrigger(Dance);
+            GameStats.gameOver = true;
+            Destroy(gameObject);
+        }
     }
 
     private void OnTriggerStay(Collider other)
@@ -262,12 +315,7 @@ public class FPController : MonoBehaviour
         
         if (isAlive && second.CompareTag("Lava"))
         {
-            health = Mathf.Clamp(health - (10 * Time.deltaTime), 0, 100);
-            Debug.Log($"Health: {health:n2}");
-            if (health <= 0)
-            {
-                DeathHandler();
-            }
+            TakeDamage(10 * Time.deltaTime);
         }
     }
 
