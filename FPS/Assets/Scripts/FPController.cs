@@ -1,5 +1,7 @@
 ﻿using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using Random = UnityEngine.Random;
 
@@ -8,6 +10,9 @@ public class FPController : MonoBehaviour
     [SerializeField] private float walkSpeed = 0.1f;
     [SerializeField] private float runSpeed = 30f;
     [SerializeField] private Transform firePoint;
+    [SerializeField] private GameObject bloodSplatter;
+    [SerializeField] private GameObject uiBlood;
+    [SerializeField] private GameObject canvas;
     [SerializeField] private AudioClip[] takeDamageSounds;
     public GameObject cam;
     public GameObject stevePrefab;
@@ -51,6 +56,9 @@ public class FPController : MonoBehaviour
     private bool isAlive = true;
     private bool runPressed;
 
+    private float canvasHeight;
+    private float canvasWidth;
+
     private static readonly int ARM = Animator.StringToHash("arm");
     private static readonly int FIRE = Animator.StringToHash("fire");
     private static readonly int RELOAD = Animator.StringToHash("reload");
@@ -69,6 +77,10 @@ public class FPController : MonoBehaviour
         TakeDamage(-100f);
         RemoveAmmoFromClip(0);
         RemoveAmmo(0);
+
+        var canvasRect = canvas.GetComponent<RectTransform>().rect;
+        canvasWidth = canvasRect.width;
+        canvasHeight = canvasRect.height;
     }
 
     // Update is called once per frame
@@ -146,7 +158,20 @@ public class FPController : MonoBehaviour
     public void TakeHit(float amount)
     {
         PlayTakeHitSound();
+        HandleBloodSplatter();
         TakeDamage(amount);
+    }
+
+    private void HandleBloodSplatter()
+    {
+        var instantiatedBlood = Instantiate(uiBlood, canvas.transform, true);
+        var offset = 50;
+        var randomX = Random.Range(0 + offset, canvasWidth - offset);
+        var randomY = Random.Range(0 + offset, canvasHeight - offset);
+        // Debug.Log($"New blood splatter coords: x: {randomX}, y: {randomY}");
+        instantiatedBlood.transform.position = new Vector3(randomX, randomY, 0f);
+        // instantiatedBlood.GetComponent<RectTransform>().SetPositionAndRotation(new Vector3(randomX,randomY, 0f), Quaternion.identity);
+        Destroy(instantiatedBlood, 2.2f);
     }
 
     private void TakeDamage(float amount)
@@ -191,13 +216,16 @@ public class FPController : MonoBehaviour
         GameStats.canShoot = false;
         anim.SetTrigger(FIRE);
         RemoveAmmoFromClip(1);
-        Debug.Log($"Remaining ammo in a clip: {ammoClip}, spare ammo: {ammo}");
+        // Debug.Log($"Remaining ammo in a clip: {ammoClip}, spare ammo: {ammo}");
 
         if (Physics.Raycast(firePoint.position, firePoint.forward, out var hitInfo, 200))
         {
             GameObject hitZombie = hitInfo.collider.gameObject;
             if (hitZombie.CompareTag("Zombie"))
             {
+                GameObject blood = Instantiate(bloodSplatter, hitInfo.point, Quaternion.identity);
+                blood.transform.LookAt(transform.position);
+                Destroy(blood, 0.1f);
                 hitZombie.GetComponent<ZombieController>().DeathHandler();
             }
         }
@@ -349,7 +377,7 @@ public class FPController : MonoBehaviour
     {
         if (Input.GetKeyUp(KeyCode.Escape))
             cursorIsLocked = false;
-        else if (Input.GetMouseButtonUp(0))
+        else if (Input.GetMouseButtonUp(0) && !EventSystem.current.IsPointerOverGameObject())
             cursorIsLocked = true;
 
         switch (cursorIsLocked)

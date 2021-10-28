@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.AI;
 using Random = UnityEngine.Random;
@@ -190,6 +191,12 @@ public class ZombieController : MonoBehaviour
         Destroy(agent);
         TurnOffAnimBools();
         animator.SetBool(Death, true);
+        foreach (var source in GetComponents<AudioSource>())
+        {
+            source.volume = 0;
+        }
+
+        
         GetComponent<SinkBody>().StartSink();
     }
 
