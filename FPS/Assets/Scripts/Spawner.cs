@@ -44,5 +44,7 @@ public class Spawner : MonoBehaviour
                 i--;
             }
         }
+        
+        Destroy(gameObject);
     }
 }

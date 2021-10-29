@@ -4492,6 +4492,7 @@ MonoBehaviour:
   animator: {fileID: 2986969213742036221}
   agent: {fileID: 1401732057}
   state: 1
+  health: 2
   walkingSpeed: 0.8
   runningSpeed: 1.6
   damageAmount: 5

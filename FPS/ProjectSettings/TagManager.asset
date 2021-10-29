@@ -11,6 +11,7 @@ TagManager:
   - Enemy
   - RagDoll
   - Home
+  - SpawnPoint
   layers:
   - Default
   - TransparentFX
@@ -20,7 +21,7 @@ TagManager:
   - UI
   - Zombie
   - Post Processing
-  - 
+  - Checkpoints
   - 
   - 
   - 

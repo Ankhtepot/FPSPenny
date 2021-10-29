@@ -14,6 +14,7 @@ public class FPController : MonoBehaviour
     [SerializeField] private GameObject uiBlood;
     [SerializeField] private GameObject canvas;
     [SerializeField] private AudioClip[] takeDamageSounds;
+    [SerializeField] private LayerMask checkpointsLayer;
     public GameObject cam;
     public GameObject stevePrefab;
     public Slider healthBar;
@@ -33,6 +34,7 @@ public class FPController : MonoBehaviour
     private float Ysensitivity = 2;
     private float MinimumX = -90;
     private float MaximumX = 90;
+    private float uiBloodSplatterScaleOffsetMax = 0.3f;
     private Rigidbody rb;
     private CapsuleCollider capsule;
     private Quaternion cameraRot;
@@ -50,6 +52,8 @@ public class FPController : MonoBehaviour
     private int maxAmmo = 50;
     private int ammoClip = 10;
     private int ammoClipMax = 10;
+    private int livesLeft = 3;
+    private Vector3 startPosition;
 
     private float health = 100f;
     private float maxHealth = 100f;
@@ -58,6 +62,8 @@ public class FPController : MonoBehaviour
 
     private float canvasHeight;
     private float canvasWidth;
+
+    private GameOverTitleController gameOverTitle;
 
     private static readonly int ARM = Animator.StringToHash("arm");
     private static readonly int FIRE = Animator.StringToHash("fire");
@@ -73,6 +79,7 @@ public class FPController : MonoBehaviour
         capsule = GetComponent<CapsuleCollider>();
         cameraRot = cam.transform.localRotation;
         characterRot = transform.localRotation;
+        startPosition = transform.position;
 
         TakeDamage(-100f);
         RemoveAmmoFromClip(0);
@@ -86,13 +93,15 @@ public class FPController : MonoBehaviour
     // Update is called once per frame
     private void Update()
     {
+        UpdateCursorLock();
+        
         if (Input.GetKeyDown(KeyCode.F))
             anim.SetBool(ARM, !anim.GetBool(ARM));
 
         runPressed = Input.GetKey(KeyCode.LeftShift);
 
-        if (Input.GetMouseButtonDown(0) 
-            && GameStats.canShoot 
+        if (Input.GetMouseButtonDown(0)
+            && GameStats.canShoot
             && anim.GetBool(ARM))
         {
             if (ammoClip > 0)
@@ -113,9 +122,9 @@ public class FPController : MonoBehaviour
             //shot.Play();
         }
 
-        if (Input.GetKeyDown(KeyCode.R) 
-            && anim.GetBool(ARM) 
-            && ammo > 0 
+        if (Input.GetKeyDown(KeyCode.R)
+            && anim.GetBool(ARM)
+            && ammo > 0
             && ammoClip < ammoClipMax)
         {
             ReloadHandler();
@@ -170,27 +179,77 @@ public class FPController : MonoBehaviour
         var randomY = Random.Range(0 + offset, canvasHeight - offset);
         // Debug.Log($"New blood splatter coords: x: {randomX}, y: {randomY}");
         instantiatedBlood.transform.position = new Vector3(randomX, randomY, 0f);
+        float scale = Random.Range(-uiBloodSplatterScaleOffsetMax, uiBloodSplatterScaleOffsetMax);
+        instantiatedBlood.transform.localScale += new Vector3(scale, scale, 0);
         // instantiatedBlood.GetComponent<RectTransform>().SetPositionAndRotation(new Vector3(randomX,randomY, 0f), Quaternion.identity);
         Destroy(instantiatedBlood, 2.2f);
     }
 
+    private GameObject steve;
     private void TakeDamage(float amount)
     {
+        if (GameStats.gameOver) return;
+        
         health = Mathf.Clamp(health - amount, 0, maxHealth);
         healthBar.value = Mathf.RoundToInt(health);
-        
-        if (health <= 0)
+        Debug.Log($"Health after change: {health:n2}");
+
+        if (isAlive && health <= 0)
         {
+            isAlive = false;
+            deathSound.Play();
+            Debug.Log("You died");
+            livesLeft--;
             Vector3 pos = new Vector3(transform.position.x,
                 Terrain.activeTerrain.SampleHeight(transform.position),
                 transform.position.z);
 
-            GameObject steve = Instantiate(stevePrefab, pos, transform.rotation);
+            steve = Instantiate(stevePrefab, pos, transform.rotation);
             steve.GetComponent<Animator>().SetTrigger(Death);
             GameStats.gameOver = true;
-            Debug.Log($"Health after attack: {health:n2}");
-            Destroy(gameObject);
+            
+            if (livesLeft <= 0)
+            {
+                RunGameOverTitle("GAME OVER");
+                Destroy(gameObject);
+            }
+            else
+            {
+                steve.GetComponent<ToMainMenuDelayed>().enabled = false;
+                cam.SetActive(false);
+                Invoke(nameof(Respawn), 5);
+            }
+            
+            // if (livesLeft <= 0)
+            // {
+            //     RunGameOverTitle("GAME OVER");
+            //     Vector3 pos = new Vector3(transform.position.x,
+            //         Terrain.activeTerrain.SampleHeight(transform.position),
+            //         transform.position.z);
+            //
+            //     GameObject steve = Instantiate(stevePrefab, pos, transform.rotation);
+            //     steve.GetComponent<Animator>().SetTrigger(Death);
+            //     GameStats.gameOver = true;
+            //     Destroy(gameObject);
+            // }
+            // else
+            // {
+            //     Debug.Log($"Lives left: {livesLeft}");
+            //     isAlive = true;
+            //     TakeDamage(-maxHealth);
+            // }
         }
+    }
+
+    private void Respawn()
+    {
+        Debug.Log("Respawning");
+        isAlive = true;
+        Destroy(steve);
+        cam.SetActive(true);
+        GameStats.gameOver = false;
+        TakeHit(-100);
+        transform.position = startPosition;
     }
 
     private void RemoveAmmoFromClip(int amount)
@@ -218,7 +277,7 @@ public class FPController : MonoBehaviour
         RemoveAmmoFromClip(1);
         // Debug.Log($"Remaining ammo in a clip: {ammoClip}, spare ammo: {ammo}");
 
-        if (Physics.Raycast(firePoint.position, firePoint.forward, out var hitInfo, 200))
+        if (Physics.Raycast(firePoint.position, firePoint.forward, out var hitInfo, 200, ~checkpointsLayer))
         {
             GameObject hitZombie = hitInfo.collider.gameObject;
             if (hitZombie.CompareTag("Zombie"))
@@ -226,7 +285,7 @@ public class FPController : MonoBehaviour
                 GameObject blood = Instantiate(bloodSplatter, hitInfo.point, Quaternion.identity);
                 blood.transform.LookAt(transform.position);
                 Destroy(blood, 0.1f);
-                hitZombie.GetComponent<ZombieController>().DeathHandler();
+                hitZombie.GetComponent<ZombieController>().TakeDamage();
             }
         }
     }
@@ -301,7 +360,7 @@ public class FPController : MonoBehaviour
         if (IsGrounded())
         {
             if (!anim.GetBool(WALKING) || playingWalking) return;
-            
+
             InvokeRepeating(nameof(PlayFootStepAudio), 0, 0.4f);
             playingWalking = true;
         }
@@ -310,6 +369,12 @@ public class FPController : MonoBehaviour
     private void OnTriggerEnter(Collider other)
     {
         var second = other.gameObject;
+
+        if (second.CompareTag("SpawnPoint"))
+        {
+            startPosition = second.transform.position;
+        }
+        
         if (second.CompareTag("Ammo") && ammo < maxAmmo)
         {
             RemoveAmmo(-10);
@@ -332,15 +397,29 @@ public class FPController : MonoBehaviour
 
             GameObject steve = Instantiate(stevePrefab, pos, transform.rotation);
             steve.GetComponent<Animator>().SetTrigger(Dance);
+            RunGameOverTitle("YOU WON");
             GameStats.gameOver = true;
             Destroy(gameObject);
+        }
+    }
+
+    private void RunGameOverTitle(string text = null)
+    {
+        if (!gameOverTitle)
+        {
+            gameOverTitle = FindObjectOfType<GameOverTitleController>();
+        }
+
+        if (gameOverTitle)
+        {
+            gameOverTitle.ShowGameOverTitle(text);
         }
     }
 
     private void OnTriggerStay(Collider other)
     {
         var second = other.gameObject;
-        
+
         if (isAlive && second.CompareTag("Lava"))
         {
             TakeDamage(10 * Time.deltaTime);
@@ -350,21 +429,11 @@ public class FPController : MonoBehaviour
     public void SetCursorLock(bool value)
     {
         lockCursor = value;
-        
+
         if (lockCursor) return;
-        
+
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
-    }
-
-    private void DeathHandler()
-    {
-        if (isAlive)
-        {
-            isAlive = false;
-            deathSound.Play();
-            Debug.Log("You died");
-        }
     }
 
     private void UpdateCursorLock()

@@ -17,6 +17,9 @@ public class AllButtons : MonoBehaviour
             gcAudioSource = GameObject.Find("GameController")?.GetComponent<AudioSource>();
             if (!gcAudioSource ) return;
             musicSlider.value = gcAudioSource.volume;
+
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
         }
     }
 

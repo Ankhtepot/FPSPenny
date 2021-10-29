@@ -3,6 +3,7 @@
 FPS/Temp/*
 FPS/Library/*
 FPS/Build/*
+Build/*
 FPS/Obj/*
 FPS/WebBuild/*
 FPS/WindowsBuild/*

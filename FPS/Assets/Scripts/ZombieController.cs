@@ -12,6 +12,7 @@ public class ZombieController : MonoBehaviour
     [SerializeField] private Animator animator;
     [SerializeField] private NavMeshAgent agent;
     [SerializeField] private STATE state = STATE.Idle;
+    [SerializeField] private int health;
     public float walkingSpeed = 10;
     public float runningSpeed = 20;
     [SerializeField] private float damageAmount = 5;
@@ -89,8 +90,12 @@ public class ZombieController : MonoBehaviour
         }
     }
 
-    public void DeathHandler()
+    public void TakeDamage()
     {
+        health--;
+
+        if (health > 0) return;
+        
         if (Random.Range(0, 4) > 1)
         {
             state = STATE.Dead;
